@@ -1,0 +1,76 @@
+# Linux/Unix
+*.swp
+*.swo
+*~
+.directory
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+
+# ===================================================================
+# Geliştirme Ortamı (IDE) ve Araçlar
+# ===================================================================
+
+# VSCode
+.vscode/*
+
+# ===================================================================
+# Node.js Projesi
+# ===================================================================
+
+# Bağımlılıklar (en önemlisi)
+node_modules/
+
+# Log dosyaları
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build çıktıları
+dist/
+build/
+.next/
+.nuxt/
+
+# Konfigürasyon ve Geçici Dosyalar
+.env
+.env.local
+.env.*.local
+
+# ===================================================================
+# Docker & PostgreSQL
+# ===================================================================
+
+# Hassas bilgileri ve yerel ayarları içeren dosyalar
+# Bu dosyalar her geliştiricinin kendi makinesine özeldir.
+docker-compose.override.yml
+
+# Veritabanı verileri
+# BU KLASÖRLER ASLA GIT'E GÖNDERİLMEMELİDİR!
+postgres_data/
+pg_data/
+pgadmin/
+
+# Veritabanı yedekleri ve diğer hassas dosyalar
+*.sql
+*.dump
+*.bak
+*.tar
+*.gz
+*.pid
+
+
+# ===================================================================
+# Diğer
+# ===================================================================
+
+# Proje seviyesinde yüklenen dosyalar (örn: kullanıcı resimleri)
+uploads/
+public/uploads/
