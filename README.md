@@ -2,7 +2,13 @@
 
 ## Proje Açıklaması
 
-Rate Shopping Web Scraper, otel sektöründe rekabet analizi için rakip otellerin web sitelerinden oda fiyatlarını otomatik olarak toplayan bir uygulamadır. Toplanan veriler PostgreSQL veritabanında saklanır ve daha sonra analiz veya raporlama amacıyla kullanılabilir.
+Rate Shopping Web Scraper, otel sektöründe rekabet analizi için rakip otellerin web sitelerinden oda fiyatlarını otomatik olarak toplayan bir uygulamadır. Toplanan veriler PostgreSQL veritabanında saklanır ve analiz veya raporlama amaçlarıyla kullanılabilir.
+
+## Amaç
+
+- Rakip otel sitelerinden güncel fiyat verilerini toplamak
+- Fiyatları veritabanına kaydederek zaman bazlı analiz yapılabilmesini sağlamak
+- Manuel veri toplama sürecini otomatik hale getirmek
 
 ## Kullanılan Teknolojiler
 
@@ -10,34 +16,41 @@ Rate Shopping Web Scraper, otel sektöründe rekabet analizi için rakip oteller
 - Cheerio
 - Puppeteer
 - PostgreSQL
-
-## Amaç
-
-- Rakip otel sitelerinden güncel fiyat verilerini toplamak
-- Fiyatları veritabanına kaydederek zaman bazlı analiz yapabilmek
-- Manuel veri toplama sürecini otomatikleştirmek
+- node-cron (otomatik görevler için)
+- dotenv (çevresel değişken yönetimi için)
+- Winston (loglama için)
 
 ## Fonksiyonel Gereksinimler
 
-- [ ] Kullanıcı sistemde takip etmek istediği otel sitelerini tanımlayabilmelidir.
-- [ ] Sistem tanımlanan sitelerden otel adı, oda tipi, fiyat, para birimi ve tarih bilgilerini çekebilmelidir.
-- [ ] Çekilen veriler PostgreSQL veritabanına kaydedilmelidir.
-- [ ] Veriler belirli aralıklarla otomatik olarak toplanmalıdır (örn. günlük cronjob).
-- [ ] Aynı gün içinde birden fazla veri çekimi durumunda veri güncellenmeli veya versiyonlanmalıdır.
-- [ ] Erişilemeyen veya hatalı sayfalar loglanmalıdır.
-- [ ] Tüm geçmiş veriler sorgulanabilir olmalıdır.
+- Kullanıcı sistemde takip etmek istediği otel sitelerini tanımlayabilmelidir.
+- Sistem tanımlanan sitelerden aşağıdaki bilgileri çekebilmelidir:
+  - Otel adı
+  - Oda tipi
+  - Fiyat
+  - Para birimi
+  - Tarih bilgisi
+- Çekilen veriler PostgreSQL veritabanına kaydedilmelidir.
+- Veriler günlük olarak otomatik toplanmalıdır (örn. cronjob ile).
+- Aynı gün içinde birden fazla veri çekimi olması durumunda veriler güncellenmeli veya versiyonlanmalıdır.
+- Erişilemeyen ya da hata alınan sayfalar sistem loglarına kaydedilmelidir.
+- Tüm geçmiş veriler tarih filtresiyle sorgulanabilir olmalıdır.
 
-## Fonksiyonel Olmayan Gereksinimler
+## Scrape Edilecek Siteler
 
-- [ ] Sistem düşük kaynak tüketimiyle verimli çalışmalıdır.
-- [ ] Scraping işlemlerinde hedef sitelere zarar verilmemeli, istek sayısı sınırlandırılmalıdır (rate limiting).
-- [ ] Kod yapısı modüler, okunabilir ve sürdürülebilir olmalıdır.
-- [ ] Veritabanı yapısı normalize edilmelidir.
-- [ ] Proje kolay kurulabilir olmalı ve yeterli dokümantasyona sahip olmalıdır.
+Proje başlangıcında hedeflenen otel siteleri aşağıdaki gibidir. Gerekli durumlarda yeni siteler kolayca entegre edilebilir şekilde yapı tasarlanmıştır.
+
+- https://www.etstur.com
+- https://www.booking.com
+- https://www.tatilsepeti.com
+- https://www.otelz.com
+- https://www.tatilbudur.com
+
+> Not: Her site için ayrı `scraper` modülü yazılmıştır. Her biri `selectors`, `pagination`, `login` gibi detaylara göre ayrı ayrı yapılandırılmıştır.
 
 ## Kurulum
 
+1. Bu projeyi klonlayın:
+
 ```bash
 git clone https://github.com/meliksavas/web-scraper.git
-cd rate-shopping-scraper
-npm install
+cd web-scraper
