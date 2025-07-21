@@ -46,4 +46,3 @@ Proje başlangıcında hedeflenen otel siteleri aşağıdaki gibidir. Gerekli du
 - https://www.tatilbudur.com
 
 > Not: Her site için ayrı `scraper` modülü yazılmıştır. Her biri `selectors`, `pagination`, `login` gibi detaylara göre ayrı ayrı yapılandırılmıştır.
-
