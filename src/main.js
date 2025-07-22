@@ -5,12 +5,12 @@ async function main() {
   // Define the search parameters
   const searchParams = {
     location: 'Antalya',
-    checkIn: '11.08.2025',
-    checkOut: '18.08.2025',
+    checkIn: '25.07.2025',
+    checkOut: '29.07.2025',
     adults: 2,
     childrenAges: [9],
     page: 0,
-    limit: 20,
+    limit: 40,
     offset: 100,
   };
 

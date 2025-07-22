@@ -3,6 +3,52 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 /**
+ * Parses hotel HTML to extract hotel data.
+ * @param {string} html - The HTML content to parse.
+ * @param {object} searchParams - The search parameters used for the request.
+ * @returns {Array} - A list of hotel objects.
+ */
+function parseHotels(html, searchParams) {
+  const $ = cheerio.load(html);
+  const hotels = [];
+  const hotelElements = $('div.has-price');
+
+  hotelElements.each((i, el) => {
+    const hotelEl = $(el);
+    const hotelData = hotelEl.find('.hotel-card-data');
+    const hotel = {
+      name: hotelData.data('hotelname'),
+      link: 'https://www.etstur.com' + hotelEl.find('a.hotel-card-link-wrapper').attr('href'),
+      price: hotelData.data('price'),
+      dates: {
+        checkIn: searchParams.checkIn,
+        checkOut: searchParams.checkOut,
+      },
+      location: hotelEl.find('p.location-wrap').text().trim().replace(/\s\s+/g, ' '),
+      rating: hotelEl.find('p.comment-wrap').text().trim().replace(/\s\s+/g, ' '),
+      boardType: hotelEl.find('li.facility-board-type span').text().trim(),
+      themes: hotelEl.find('.free-package-item').map((i, themeEl) => $(themeEl).text().trim().replace(/\s\s+/g, ' ')).get(),
+      otherData: {
+        lat: hotelData.data('lat'),
+        lon: hotelData.data('lon'),
+        hotelId: hotelData.data('hotel-id'),
+        boardType: hotelData.data('boardtype'),
+        region: hotelData.data('region'),
+        totalNights: hotelData.data('totalnights'),
+        discountRate: hotelData.data('discountrate'),
+        totalComments: hotelData.data('totalcomments'),
+        country: hotelData.data('country'),
+        city: hotelData.data('city'),
+        score: hotelData.data('score'),
+      }
+    };
+    hotels.push(hotel);
+  });
+
+  return hotels;
+}
+
+/**
  * Generates a URL from user input, fetches hotel data from Etstur,
  * and extracts the first hotel with a price.
  * @param {object} params - The search parameters.
@@ -57,20 +103,9 @@ async function scrapeEtsturHotels(params) {
   try {
     const response = await axios.get(url);
     const html = response.data;
-    const $ = cheerio.load(html);
-
-    const hotelWithPrice = $('div.has-price');
-
-    if (hotelWithPrice.length > 0) {
-      const hotelHtml = $.html(hotelWithPrice);
-      console.log('Hotels with Price" ---');
-      console.log(hotelHtml);
-      console.log('------------------------------');
-      return hotelHtml;
-    } else {
-      console.log('No hotels with a price found on the page.');
-      return null;
-    }
+    const hotels = parseHotels(html, params);
+    console.log(JSON.stringify(hotels, null, 2));
+    return hotels;
   } catch (error) {
     console.error("Error fetching or parsing data from Etstur:", error.message);
     if (error.response) {
