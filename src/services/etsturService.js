@@ -1,27 +1,27 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { debug } = require('puppeteer');
 
 /**
  * Otel isminden Etstur otel URL'si üretir.
  * Türkçe karakterleri temizler, boşlukları tire yapar ve her kelimenin baş harfini büyük yapar.
  */
 function generateHotelUrl(hotelName) {
+  console.log(hotelName);
   const hotelNameOnly = hotelName.split(',')[0];
   const slug = hotelNameOnly
-    .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Türkçe karakterleri sil
     .replace(/ç/g, "c").replace(/ğ/g, "g").replace(/ı/g, "i")
     .replace(/ö/g, "o").replace(/ş/g, "s").replace(/ü/g, "u")
-    .replace(/[^a-z0-9\s-]/g, "") // özel karakterleri sil
+    .replace(/[^a-z0-9\s-]/gi, "") // özel karakterleri sil
     .trim()
     .split(/\s+/) // kelimelere ayır
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // baş harfleri büyüt
     .join("-");
-
+  
   return `https://www.etstur.com/${slug}`;
 }
 
-/**
+/** 
  * Otel ismiyle URL'yi oluşturur, sonra otelin HTML'inden hotelId'yi alır.
  */
 async function getHotelIdFromName(hotelName) {
@@ -205,8 +205,123 @@ function parseRoomData(apiResponse) {
     return parsedData;
 }
 
+
+/**
+ * Fetches available room types for a given hotel ID from Etstur.
+ * @param {string} hotelId - The ID of the hotel.
+ * @returns {Promise<Array>} A promise that resolves to a list of room type names.
+ */
+async function getRoomTypes(hotelId) {
+    const roomApiUrl = "https://www.etstur.com/services/api/room";
+    const postData = { hotelId: hotelId, checkIn: "2025-08-20", checkOut: "2025-08-27", room: { adultCount: 2, childCount: 0, childAges: [], infantCount: 0 } };
+
+    try {
+        const apiResponse = await axios.post(roomApiUrl, postData, {
+            headers: { "accept": "application/json", "content-type": "application/json" },
+        });
+
+        if (apiResponse.data.success && apiResponse.data.result && apiResponse.data.result.rooms) {
+            return [...new Set(apiResponse.data.result.rooms.map(room => room.roomName))];
+        }
+        return [];
+    } catch (error) {
+        console.error("Error fetching room types:", error.message);
+        return [];
+    }
+}
+
+/**
+ * Fetches and processes pricing data for multiple hotels and their selected room types.
+ * @param {object} params - The parameters for fetching comparison data.
+ * @returns {Promise<Array>} A promise that resolves to an array of hotel data with filtered rooms.
+ */
+async function fetchComparisonData(params) {
+    const { hotels, checkIn, checkOut, adults, childrenAges } = params;
+    const allHotelsData = [];
+
+    for (const hotel of hotels) {
+        const hotelData = await fetchHotelData({
+            hotelName: hotel.name,
+            checkIn,
+            checkOut,
+            adults,
+            childrenAges
+        });
+
+        if (hotelData && hotelData.success && hotelData.result && hotelData.result.rooms) {
+            const filteredRooms = hotelData.result.rooms.filter(room =>
+                hotel.roomTypes.includes(room.roomName)
+            );
+            allHotelsData.push({
+                hotelName: hotel.name,
+                rooms: filteredRooms
+            });
+        }
+    }
+    return allHotelsData;
+}
+
+/**
+ * Analyzes and structures the comparison data into a table format.
+ * @param {Array} comparisonData - The raw comparison data from fetchComparisonData.
+ * @returns {object} An object containing the structured table data.
+ */
+function analyzeComparisonData(comparisonData) {
+    const table = {
+        headers: ["Otel / Tarih"],
+        rows: [],
+        summary: {
+            cheapest: {},
+            mostExpensive: {},
+            average: {}
+        }
+    };
+    const dailyPricesMap = new Map();
+
+    comparisonData.forEach(hotel => {
+        hotel.rooms.forEach(room => {
+            const rowHeader = `${hotel.hotelName} (${room.roomName})`;
+            const row = { header: rowHeader, prices: {} };
+
+            room.subBoards[0].dailyPrices.forEach(price => {
+                const date = new Date(price.date).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                if (!table.headers.includes(date)) {
+                    table.headers.push(date);
+                }
+                row.prices[date] = price.amount;
+
+                if (!dailyPricesMap.has(date)) {
+                    dailyPricesMap.set(date, []);
+                }
+                dailyPricesMap.get(date).push(price.amount);
+            });
+            table.rows.push(row);
+        });
+    });
+
+    table.headers.sort((a, b) => {
+        if (a === "Otel / Tarih") return -1;
+        if (b === "Otel / Tarih") return 1;
+        const [dayA, monthA, yearA] = a.split('.');
+        const [dayB, monthB, yearB] = b.split('.');
+        return new Date(`${yearA}-${monthA}-${dayA}`) - new Date(`${yearB}-${monthB}-${dayB}`);
+    });
+
+    dailyPricesMap.forEach((prices, date) => {
+        table.summary.cheapest[date] = Math.min(...prices);
+        table.summary.mostExpensive[date] = Math.max(...prices);
+        table.summary.average[date] = prices.reduce((a, b) => a + b, 0) / prices.length;
+    });
+
+    return table;
+}
+
 module.exports = {
   searchHotels,
   fetchHotelData,
   parseRoomData,
+  getRoomTypes,
+  getHotelIdFromName,
+  fetchComparisonData,
+  analyzeComparisonData
 };

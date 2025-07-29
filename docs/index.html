@@ -3,27 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Scraper</title>
+    <title>Hotel Price Comparator</title>
     <style>
-        body { font-family: sans-serif; }
-        #autocomplete-results { border: 1px solid #ccc; max-height: 150px; overflow-y: auto; }
-        .result-item { padding: 5px; cursor: pointer; }
+        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f4; }
+        h1, h2 { color: #333; }
+        .container { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .search-section, .hotel-section, .comparison-section { margin-bottom: 20px; }
+        input[type="text"], input[type="date"], input[type="number"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        #autocomplete-results, .rival-autocomplete-results { border: 1px solid #ccc; max-height: 150px; overflow-y: auto; }
+        .result-item { padding: 8px; cursor: pointer; }
         .result-item:hover { background-color: #eee; }
+        .hotel-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
+        .room-types { margin-top: 10px; }
+        #comparison-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        #comparison-table th, #comparison-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        #comparison-table th { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
-    <h1>Hotel Search</h1>
-    <input type="text" id="search-input" placeholder="Enter hotel name...">
-    <input type="date" id="checkin-date">
-    <input type="date" id="checkout-date">
-    <input type="number" id="adults" placeholder="Adults" value="2">
-    <input type="number" id="children-count" placeholder="Children" value="0">
-    <div id="child-ages-container"></div>
-    <button id="get-data-button">Get Hotel Data</button>
-    <div id="autocomplete-results"></div>
-    <hr>
-    <h2>Hotel Data</h2>
-    <pre id="hotel-data"></pre>
+    <div class="container">
+        <h1>Hotel Price Comparison</h1>
+
+        <div class="search-section">
+            <h2>General Information</h2>
+            <input type="date" id="checkin-date">
+            <input type="date" id="checkout-date">
+            <input type="number" id="adults" placeholder="Adults" value="2">
+            <input type="number" id="children-count" placeholder="Children" value="0">
+            <div id="child-ages-container"></div>
+        </div>
+
+        <div class="hotel-section">
+            <h2>Primary Hotel</h2>
+            <input type="text" id="primary-search-input" placeholder="Search for the main hotel...">
+            <div id="primary-autocomplete-results"></div>
+            <div id="primary-hotel-container"></div>
+        </div>
+
+        <div class="hotel-section">
+            <h2>Rival Hotels</h2>
+            <input type="text" id="rival-search-input" placeholder="Search to add a rival hotel...">
+            <div id="rival-autocomplete-results"></div>
+            <div id="rival-hotels-list"></div>
+        </div>
+
+        <div class="comparison-section">
+            <button id="compare-prices-button">Compare Prices</button>
+            <div id="comparison-results"></div>
+        </div>
+    </div>
+
     <script src="main.js"></script>
 </body>
 </html>

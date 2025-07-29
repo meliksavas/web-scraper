@@ -34,7 +34,46 @@ async function getHotelData(req, res) {
     }
 }
 
+async function getRoomTypesForHotel(req, res) {
+    const { hotelName } = req.body;
+    if (!hotelName) {
+        return res.status(400).json({ error: 'hotelName is required' });
+    }
+
+    try {
+        const hotelInfo = await etsturService.getHotelIdFromName(hotelName);
+        if (!hotelInfo || !hotelInfo.hotelId) {
+            return res.status(404).json({ error: 'Hotel not found or could not retrieve hotel ID.' });
+        }
+
+        const roomTypes = await etsturService.getRoomTypes(hotelInfo.hotelId);
+        res.json({ roomTypes });
+    } catch (error) {
+        console.error('Error in getRoomTypesForHotel:', error);
+        res.status(500).json({ error: 'Failed to get room types.' });
+    }
+}
+
+async function comparePrices(req, res) {
+    const { hotels, checkIn, checkOut, adults, childrenAges } = req.body;
+
+    if (!hotels || !Array.isArray(hotels) || hotels.length === 0) {
+        return res.status(400).json({ error: 'Invalid or empty hotels array.' });
+    }
+
+    try {
+        const comparisonData = await etsturService.fetchComparisonData({ hotels, checkIn, checkOut, adults, childrenAges });
+        const analysis = etsturService.analyzeComparisonData(comparisonData);
+        res.json(analysis);
+    } catch (error) {
+        console.error('Error in comparePrices:', error);
+        res.status(500).json({ error: 'Failed to compare prices.' });
+    }
+}
+
 module.exports = {
     search,
     getHotelData,
+    getRoomTypesForHotel,
+    comparePrices
 };
