@@ -1,48 +1,46 @@
-# Rate Shopping Web Scraper
+# 🏨 Etstur Hotel Price Comparator
 
-## Proje Açıklaması
+Kullanıcıların belirli tarih aralıklarında seçtikleri bir otelin ve rakip otellerin fiyatlarını oda tipi bazlı karşılaştırmalı olarak görüntüleyebileceği bir web uygulamasıdır.
 
-Rate Shopping Web Scraper, otel sektöründe rekabet analizi için rakip otellerin web sitelerinden oda fiyatlarını otomatik olarak toplayan bir uygulamadır. Toplanan veriler PostgreSQL veritabanında saklanır ve analiz veya raporlama amaçlarıyla kullanılabilir.
+---
 
-## Amaç
+## 🚀 Özellikler
 
-- Rakip otel sitelerinden güncel fiyat verilerini toplamak
-- Fiyatları veritabanına kaydederek zaman bazlı analiz yapılabilmesini sağlamak
-- Manuel veri toplama sürecini otomatik hale getirmek
+- 🔎 Ana otel ve birden fazla rakip otel seçme
+- 🛏 Oda tipi bazlı fiyat karşılaştırması
+- 📅 Tarih ve kişi sayısına göre dinamik filtreleme
+- 📊 Fiyatların günlük karşılaştırmalı tablo halinde gösterimi
+- 🧠 Ortalama, en ucuz ve en pahalı fiyatların otomatik hesaplanması
+- 🖱 Basit ve kullanıcı dostu arayüz
+- 📤 Şu an sadece [etstur.com](https://www.etstur.com) desteklenmektedir
 
-## Kullanılan Teknolojiler
+---
 
-- Node.js
-- Cheerio
-- Puppeteer
-- PostgreSQL
-- node-cron (otomatik görevler için)
-- dotenv (çevresel değişken yönetimi için)
-- Winston (loglama için)
+## 🖼️ Ekran Görüntüleri
 
-## Fonksiyonel Gereksinimler
+### Otel ve Oda Seçimi
+![Tarih ve Kişi Sayısı](./screenshots/general.png)
 
-- Kullanıcı sistemde takip etmek istediği otel sitelerini tanımlayabilmelidir.
-- Sistem tanımlanan sitelerden aşağıdaki bilgileri çekebilmelidir:
-  - Otel adı
-  - Oda tipi
-  - Fiyat
-  - Para birimi
-  - Tarih bilgisi
-- Çekilen veriler PostgreSQL veritabanına kaydedilmelidir.
-- Veriler günlük olarak otomatik toplanmalıdır (örn. cronjob ile).
-- Aynı gün içinde birden fazla veri çekimi olması durumunda veriler güncellenmeli veya versiyonlanmalıdır.
-- Erişilemeyen ya da hata alınan sayfalar sistem loglarına kaydedilmelidir.
-- Tüm geçmiş veriler tarih filtresiyle sorgulanabilir olmalıdır.
+### Otel ve Oda Seçimi
+![Otel ve Oda Seçimi](./screenshots/room.png)
 
-## Scrape Edilecek Siteler
+### Fiyat Karşılaştırma Tablosu
+![Fiyat Tablosu](./screenshots/compare.png)
 
-Proje başlangıcında hedeflenen otel siteleri aşağıdaki gibidir. Gerekli durumlarda yeni siteler kolayca entegre edilebilir şekilde yapı tasarlanmıştır.
+---
 
-- https://www.etstur.com
-- https://www.booking.com
-- https://www.tatilsepeti.com
-- https://www.otelz.com
-- https://www.tatilbudur.com
+## 🧱 Kullanılan Teknolojiler
 
-> Not: Her site için ayrı `scraper` modülü yazılmıştır. Her biri `selectors`, `pagination`, `login` gibi detaylara göre ayrı ayrı yapılandırılmıştır.
+- **Frontend:** HTML, CSS, JavaScript
+- **Backend:** Node.js, Express
+- **Web Scraping:** Puppeteer, Cheerio
+
+---
+
+## 📦 Kurulum
+
+```bash
+git clone https://github.com/meliksavas/web-scraper.git
+cd web-scraper
+npm install
+npm start
