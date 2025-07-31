@@ -17,7 +17,7 @@ function generateHotelUrl(hotelName) {
     .trim()
     .split(/\s+/) // kelimelere ayır
     .join("-");
-  
+
   return `https://www.etstur.com/${slug}`;
 }
 
@@ -115,94 +115,101 @@ async function searchHotels(query) {
  *                                 alternatives API, or null if an error occurs.
  */
 async function fetchHotelData(params) {
-    const { hotelName, checkIn, checkOut, adults, childrenAges = [] } = params;
-    console.log(`[DEBUG] fetchHotelData received hotelName: ${hotelName}`);
+  const { hotelName, checkIn, checkOut, adults, childrenAges = [] } = params;
+  console.log(`[DEBUG] fetchHotelData received hotelName: ${hotelName}`);
 
-    const formattedCheckIn = checkIn;
-    const formattedCheckOut = checkOut;
+  const formattedCheckIn = checkIn;
+  const formattedCheckOut = checkOut;
 
-    const hotelInfo = await getHotelIdFromName(hotelName);
+  const hotelInfo = await getHotelIdFromName(hotelName);
 
-    if (!hotelInfo || !hotelInfo.hotelId) {
-        console.error(`Could not find hotelId for ${hotelName}`);
-        return null;
+  if (!hotelInfo || !hotelInfo.hotelId) {
+    console.error(`Could not find hotelId for ${hotelName}`);
+    return null;
+  }
+
+  const { hotelId, hotelUrl } = hotelInfo;
+  console.log(`[DEBUG] Using hotelId: ${hotelId}`);
+
+  const refererUrl = new URL(hotelUrl);
+  refererUrl.searchParams.set('check_in', checkIn.replace(/-/g, '.'));
+  refererUrl.searchParams.set('check_out', checkOut.replace(/-/g, '.'));
+  refererUrl.searchParams.set('adult_1', adults);
+  refererUrl.searchParams.set('child_1', childrenAges.length);
+  childrenAges.forEach((age, index) => {
+    refererUrl.searchParams.set(`childage_1_${index + 1}`, age);
+  });
+
+  const roomApiUrl = "https://www.etstur.com/services/api/room";
+  const postData = {
+    hotelId: hotelId,
+    checkIn: formattedCheckIn,
+    checkOut: formattedCheckOut,
+    room: {
+      adultCount: parseInt(adults, 10),
+      childCount: childrenAges.length,
+      childAges: childrenAges,
+      infantCount: 0
     }
+  };
 
-    const { hotelId, hotelUrl } = hotelInfo;
-    console.log(`[DEBUG] Using hotelId: ${hotelId}`);
+  console.log(`[DEBUG] Fetching room data from: ${roomApiUrl}`);
+  console.log(`[DEBUG] POST data: ${JSON.stringify(postData, null, 2)}`);
+  console.log(`[DEBUG] Referer: ${refererUrl.href}`);
 
-    const refererUrl = new URL(hotelUrl);
-    refererUrl.searchParams.set('check_in', checkIn.replace(/-/g, '.'));
-    refererUrl.searchParams.set('check_out', checkOut.replace(/-/g, '.'));
-    refererUrl.searchParams.set('adult_1', adults);
-    refererUrl.searchParams.set('child_1', childrenAges.length);
-    childrenAges.forEach((age, index) => {
-        refererUrl.searchParams.set(`childage_1_${index + 1}`, age);
+  try {
+    const apiResponse = await axios.post(roomApiUrl, postData, {
+      headers: {
+        "accept": "application/json, text/plain, */*",
+        "content-type": "application/json",
+        "Referer": refererUrl.href
+      },
     });
-
-    const roomApiUrl = "https://www.etstur.com/services/api/room";
-    const postData = {
-        hotelId: hotelId,
-        checkIn: formattedCheckIn,
-        checkOut: formattedCheckOut,
-        room: {
-            adultCount: parseInt(adults, 10),
-            childCount: childrenAges.length,
-            childAges: childrenAges,
-            infantCount: 0
-        }
-    };
-
-    console.log(`[DEBUG] Fetching room data from: ${roomApiUrl}`);
-    console.log(`[DEBUG] POST data: ${JSON.stringify(postData, null, 2)}`);
-    console.log(`[DEBUG] Referer: ${refererUrl.href}`);
-
-    try {
-        const apiResponse = await axios.post(roomApiUrl, postData, {
-            headers: {
-                "accept": "application/json, text/plain, */*",
-                "content-type": "application/json",
-                "Referer": refererUrl.href
-            },
-        });
-        console.log("Successfully fetched hotel data from room API.");
-        return apiResponse.data;
-    } catch (error) {
-        console.error("Error fetching from room API:", error.message);
-        if (error.response) {
-            console.error("Status:", error.response.status);
-            console.error("Data:", error.response.data);
-        }
-        return null;
+    console.log("Successfully fetched hotel data from room API.");
+    return apiResponse.data;
+  } catch (error) {
+    console.error("Error fetching from room API:", error.message);
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Data:", error.response.data);
     }
+    return null;
+  }
 }
 
 
 function parseRoomData(apiResponse) {
-    if (!apiResponse || !apiResponse.success || !apiResponse.result || !apiResponse.result.rooms) {
-        console.error("Invalid or empty API response.");
-        return [];
-    }
+  if (!apiResponse?.success || !apiResponse.result?.rooms) {
+    console.error("Invalid or empty API response.");
+    return [];
+  }
 
-    const rooms = apiResponse.result.rooms;
-    const parsedData = rooms.map(room => {
-        const roomName = room.roomName;
-        const subBoard = room.subBoards[0]; 
-        const totalPrice = subBoard.price.discountedPrice;
-        const dailyPrices = subBoard.dailyPrices.map(dp => ({
-            date: dp.date,
-            amount: dp.amount,
-            currency: dp.currency
-        }));
+  const parsedData = apiResponse.result.rooms
+    .map(room => {
+      // Find the first sub-board that is explicitly marked as 'AVAILABLE'
+      const availableSubBoard = room.subBoards?.find(
+        sb => sb.availability?.type === 'AVAILABLE'
+      );
 
-        return {
-            roomName,
-            totalPrice,
-            dailyPrices
-        };
-    });
+      // If no available sub-board is found, skip this room
+      if (!availableSubBoard) {
+        return null;
+      }
 
-    return parsedData;
+      // If available, parse its data
+      return {
+        roomName: room.roomName,
+        totalPrice: availableSubBoard.price.discountedPrice,
+        dailyPrices: availableSubBoard.dailyPrices.map(dp => ({
+          date: dp.date,
+          amount: dp.amount,
+          currency: dp.currency
+        }))
+      };
+    })
+    .filter(Boolean); // This removes any null entries from the array
+
+  return parsedData;
 }
 
 
@@ -211,23 +218,26 @@ function parseRoomData(apiResponse) {
  * @param {string} hotelId - The ID of the hotel.
  * @returns {Promise<Array>} A promise that resolves to a list of room type names.
  */
-async function getRoomTypes(hotelId) {
-    const roomApiUrl = "https://www.etstur.com/services/api/room";
-    const postData = { hotelId: hotelId, checkIn: "2025-08-20", checkOut: "2025-08-27", room: { adultCount: 2, childCount: 0, childAges: [], infantCount: 0 } };
+async function getRoomTypes(hotelId, checkIn, checkOut) {
+  const roomApiUrl = "https://www.etstur.com/services/api/room";
+  const postData = { hotelId: hotelId, checkIn, checkOut, room: { adultCount: 2, childCount: 0, childAges: [], infantCount: 0 } };
 
-    try {
-        const apiResponse = await axios.post(roomApiUrl, postData, {
-            headers: { "accept": "application/json", "content-type": "application/json" },
-        });
+  try {
+    const apiResponse = await axios.post(roomApiUrl, postData, {
+      headers: { "accept": "application/json", "content-type": "application/json" },
+    });
 
-        if (apiResponse.data.success && apiResponse.data.result && apiResponse.data.result.rooms) {
-            return [...new Set(apiResponse.data.result.rooms.map(room => room.roomName))];
-        }
-        return [];
-    } catch (error) {
-        console.error("Error fetching room types:", error.message);
-        return [];
+    if (apiResponse.data.success && apiResponse.data.result && apiResponse.data.result.rooms) {
+      console.log(JSON.stringify(apiResponse.data, null, 2));
+      const roomTypes = [...new Set(apiResponse.data.result.rooms.map(room => room.roomName))];
+      console.log("Fetched room types:", roomTypes);
+      return roomTypes;
     }
+    return [];
+  } catch (error) {
+    console.error("Error fetching room types:", error.message);
+    return [];
+  }
 }
 
 /**
@@ -236,29 +246,29 @@ async function getRoomTypes(hotelId) {
  * @returns {Promise<Array>} A promise that resolves to an array of hotel data with filtered rooms.
  */
 async function fetchComparisonData(params) {
-    const { hotels, checkIn, checkOut, adults, childrenAges } = params;
-    const allHotelsData = [];
+  const { hotels, checkIn, checkOut, adults, childrenAges } = params;
+  const allHotelsData = [];
 
-    for (const hotel of hotels) {
-        const hotelData = await fetchHotelData({
-            hotelName: hotel.name,
-            checkIn,
-            checkOut,
-            adults,
-            childrenAges
-        });
+  for (const hotel of hotels) {
+    const hotelData = await fetchHotelData({
+      hotelName: hotel.name,
+      checkIn,
+      checkOut,
+      adults,
+      childrenAges
+    });
 
-        if (hotelData && hotelData.success && hotelData.result && hotelData.result.rooms) {
-            const filteredRooms = hotelData.result.rooms.filter(room =>
-                hotel.roomTypes.includes(room.roomName)
-            );
-            allHotelsData.push({
-                hotelName: hotel.name,
-                rooms: filteredRooms
-            });
-        }
+    if (hotelData && hotelData.success && hotelData.result && hotelData.result.rooms) {
+      const filteredRooms = hotelData.result.rooms.filter(room =>
+        hotel.roomTypes.includes(room.roomName)
+      );
+      allHotelsData.push({
+        hotelName: hotel.name,
+        rooms: filteredRooms
+      });
     }
-    return allHotelsData;
+  }
+  return allHotelsData;
 }
 
 /**
@@ -267,53 +277,56 @@ async function fetchComparisonData(params) {
  * @returns {object} An object containing the structured table data.
  */
 function analyzeComparisonData(comparisonData) {
-    const table = {
-        headers: ["Otel / Tarih"],
-        rows: [],
-        summary: {
-            cheapest: {},
-            mostExpensive: {},
-            average: {}
-        }
-    };
-    const dailyPricesMap = new Map();
+  const table = {
+    headers: ["Otel / Tarih"],
+    rows: [],
+    summary: {
+      cheapest: {},
+      mostExpensive: {},
+      average: {}
+    }
+  };
+  const dailyPricesMap = new Map();
 
-    comparisonData.forEach(hotel => {
-        hotel.rooms.forEach(room => {
-            const rowHeader = `${hotel.hotelName} (${room.roomName})`;
-            const row = { header: rowHeader, prices: {} };
+  comparisonData.forEach(hotel => {
+    hotel.rooms.forEach(room => {
+      const rowHeader = `${hotel.hotelName} (${room.roomName})`;
+      const row = { header: rowHeader, prices: {} };
 
-            room.subBoards[0].dailyPrices.forEach(price => {
-                const date = new Date(price.date).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                if (!table.headers.includes(date)) {
-                    table.headers.push(date);
-                }
-                row.prices[date] = price.amount;
+      if (room.subBoards && room.subBoards.length > 0 && room.subBoards[0].dailyPrices) {
+        room.subBoards[0].dailyPrices.forEach(price => {
+          const [day, month, year] = price.date.split('/');
+          const date = new Date(year, month - 1, day).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          if (!table.headers.includes(date)) {
+            table.headers.push(date);
+          }
+          row.prices[date] = price.amount;
 
-                if (!dailyPricesMap.has(date)) {
-                    dailyPricesMap.set(date, []);
-                }
-                dailyPricesMap.get(date).push(price.amount);
-            });
-            table.rows.push(row);
+          if (!dailyPricesMap.has(date)) {
+            dailyPricesMap.set(date, []);
+          }
+          dailyPricesMap.get(date).push(price.amount);
         });
+      }
+      table.rows.push(row);
     });
+  });
 
-    table.headers.sort((a, b) => {
-        if (a === "Otel / Tarih") return -1;
-        if (b === "Otel / Tarih") return 1;
-        const [dayA, monthA, yearA] = a.split('.');
-        const [dayB, monthB, yearB] = b.split('.');
-        return new Date(`${yearA}-${monthA}-${dayA}`) - new Date(`${yearB}-${monthB}-${dayB}`);
-    });
+  table.headers.sort((a, b) => {
+    if (a === "Otel / Tarih") return -1;
+    if (b === "Otel / Tarih") return 1;
+    const [dayA, monthA, yearA] = a.split('.');
+    const [dayB, monthB, yearB] = b.split('.');
+    return new Date(`${yearA}-${monthA}-${dayA}`) - new Date(`${yearB}-${monthB}-${dayB}`);
+  });
 
-    dailyPricesMap.forEach((prices, date) => {
-        table.summary.cheapest[date] = Math.min(...prices);
-        table.summary.mostExpensive[date] = Math.max(...prices);
-        table.summary.average[date] = prices.reduce((a, b) => a + b, 0) / prices.length;
-    });
+  dailyPricesMap.forEach((prices, date) => {
+    table.summary.cheapest[date] = Math.min(...prices);
+    table.summary.mostExpensive[date] = Math.max(...prices);
+    table.summary.average[date] = prices.reduce((a, b) => a + b, 0) / prices.length;
+  });
 
-    return table;
+  return table;
 }
 
 module.exports = {

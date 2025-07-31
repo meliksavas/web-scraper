@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch('/api/room-types', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hotelName: hotel.name })
+            body: JSON.stringify({ hotelName: hotel.name, checkIn: checkinDate.value, checkOut: checkoutDate.value })
         });
         const data = await response.json();
         if (data.roomTypes) {

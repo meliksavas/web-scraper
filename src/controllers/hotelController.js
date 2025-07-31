@@ -23,7 +23,13 @@ async function getHotelData(req, res) {
 
     try {
         const hotelData = await etsturService.fetchHotelData({ hotelName, checkIn, checkOut, adults, childrenAges });
-        if (hotelData) {
+        if (hotelData && hotelData.success && hotelData.result && hotelData.result.rooms) {
+            hotelData.result.rooms = hotelData.result.rooms.filter(room =>
+                room.subBoards &&
+                room.subBoards.length > 0 &&
+                room.subBoards[0].price &&
+                room.subBoards[0].price.discountedPrice
+            );
             res.json(hotelData);
         } else {
             res.status(404).json({ error: 'Hotel data not found.' });
@@ -35,9 +41,15 @@ async function getHotelData(req, res) {
 }
 
 async function getRoomTypesForHotel(req, res) {
-    const { hotelName } = req.body;
+    const { hotelName, checkIn, checkOut } = req.body;
     if (!hotelName) {
         return res.status(400).json({ error: 'hotelName is required' });
+    }
+    if (!checkIn) {
+        return res.status(400).json({ error: 'checkIn is required' });
+    }
+    if (!checkOut) {
+        return res.status(400).json({ error: 'checkOut is required' });
     }
 
     try {
@@ -46,7 +58,7 @@ async function getRoomTypesForHotel(req, res) {
             return res.status(404).json({ error: 'Hotel not found or could not retrieve hotel ID.' });
         }
 
-        const roomTypes = await etsturService.getRoomTypes(hotelInfo.hotelId);
+        const roomTypes = await etsturService.getRoomTypes(hotelInfo.hotelId, checkIn, checkOut);
         res.json({ roomTypes });
     } catch (error) {
         console.error('Error in getRoomTypesForHotel:', error);
